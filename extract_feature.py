@@ -1,4 +1,5 @@
 import argparse
+import io
 import json
 import os
 import shutil
@@ -6,7 +7,9 @@ import sys
 from glob import glob
 from pathlib import Path
 
+import PIL
 import cv2
+from matplotlib import pyplot as plt
 import numpy as np
 import torch
 from torch.nn import functional as F
@@ -16,6 +19,7 @@ from tqdm import tqdm
 import detectron2
 from detectron2.config import CfgNode as CN
 from detectron2.config.config import get_cfg
+from detectron2.data.catalog import MetadataCatalog
 from detectron2.engine.defaults import DefaultPredictor
 from detectron2.layers import nms
 from detectron2.modeling.box_regression import Box2BoxTransform
@@ -26,11 +30,11 @@ from detectron2.modeling.roi_heads.fast_rcnn import (
 )
 from detectron2.structures.boxes import Boxes
 from detectron2.structures.instances import Instances
-
+from detectron2.utils.visualizer import Visualizer
+from PIL import Image
 D2_ROOT = os.path.dirname(os.path.dirname(detectron2.__file__))  # Root of detectron2
 MIN_BOXES = 36
 MAX_BOXES = 100
-
 
 def arguments():
     parser = argparse.ArgumentParser()
@@ -169,7 +173,7 @@ def doit(detector, raw_image):
         feature_pooled = box_features.mean(
             dim=[2, 3]
         )  # (sum_proposals, 2048), pooled to 1x1
-        print(feature_pooled.shape)
+        # print(feature_pooled.shape)
         # Predict classes and boxes for each proposal.
         # pred_class_logits, pred_proposal_deltas = (
         #     detector.model.roi_heads.box_predictor(feature_pooled)
@@ -217,7 +221,6 @@ def doit(detector, raw_image):
 
         return raw_instances_list, roi_features_list
 
-
 def gen_feature(args):
     detector = build_model()
     os.makedirs(os.path.join(args.out_folder), exist_ok=True)
@@ -234,6 +237,8 @@ def gen_feature(args):
         # filename = img[-1].split(".")[0]
         # im0 = cv2.imread(_img_path)
         filename = img["filename"].split(".")[0]
+        
+        # if filename!="3672940355_47f30e2b28": continue
         image_id = img["imgid"]
 
         im0 = cv2.imread(
@@ -245,7 +250,8 @@ def gen_feature(args):
         instances = instances_list[0].to("cpu")
         features = features_list[0].to("cpu")
 
-        print("features.shape", features.shape)
+        # print("features.shape", features.shape)
+        
         num_objects = len(instances)
         image_bboxes = instances.pred_boxes.tensor.numpy()
         info = {
@@ -271,8 +277,34 @@ def gen_feature(args):
             info=info,
         )
 
+def visualazation(img_path):
+    
+    detector = build_model()
+    
+    im0 = cv2.imread(
+            img_path
+        )
+    
+    instances_list, features_list = doit(detector, im0)
+    instances = instances_list[0].to("cpu")
+    features = features_list[0].to("cpu")
+
+    
+    v = Visualizer(im0[:, :, :], MetadataCatalog.get("obj"), scale=1.2)
+    
+    v = v.draw_instance_predictions(instances)
+    image = v.get_image()[:, :, ::-1]
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
+    plt.figure(figsize=(image_rgb.shape[1] / 100, image_rgb.shape[0] / 100))
+    plt.imshow(image)
+    plt.axis('off')
+    plt.title('Image with Bbox')
+    plt.show()
 
 if __name__ == "__main__":
     args = arguments()
     print(args)  # Print parsed arguments
-    gen_feature(args)
+    # gen_feature(args)
+    path = "D:/NCKH/ImageCaption/Dataset/Flickr8k_Dataset/3672940355_47f30e2b28.jpg"
+    visualazation(path)
