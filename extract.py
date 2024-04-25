@@ -312,6 +312,6 @@ def visualazation(img_path):
 if __name__ == "__main__":
     args = arguments()
     print(args)  # Print parsed arguments
-    # gen_feature(args)
-    path = "D:/NCKH/ImageCaption/Dataset/Flickr8k_Dataset/3399312265_9c74378692.jpg"
-    visualazation(path)
+    gen_feature(args)
+    # path = "D:/NCKH/ImageCaption/Dataset/Flickr8k_Dataset/3399312265_9c74378692.jpg"
+    # visualazation(path)
